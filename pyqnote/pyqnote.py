@@ -115,6 +115,13 @@ class PyQNote(object):
 
 class Settings(object):
     def __init__(self, window):
+        config_dict = Config().read_config()
+        dropbox_enabled = config_dict['dropbox']['use'] == 'True'
+        try:
+            dropbox_path = config_dict['dropbox']['path']
+        except KeyError:
+            dropbox_path = ''
+
         # Settings window
         settings_window = gtk.Window()
         settings_window.set_usize(600, 300)
@@ -122,20 +129,17 @@ class Settings(object):
 
         # Use Dropbox checkbox
         self.use_dropbox_checkbox = gtk.CheckButton('Use Dropbox')
-        self.use_dropbox_checkbox.set_active(DropboxActor.is_installed())
+        self.use_dropbox_checkbox.set_active(dropbox_enabled)
 
         # Dropbox path entry
         self.dropbox_dir_location = gtk.Entry()
-        try:
-            self.dropbox_dir_location.set_text(DropboxActor.get_path())
-        except IOError, e:
-            # TODO: chage this when logging implemented
-            print e
-            pass
+        self.dropbox_dir_location.set_text(dropbox_path)
+        self.dropbox_dir_location.set_sensitive(dropbox_enabled)
 
         # Get Dropbox directory button
         self.get_dropbox_dir_button = gtk.Button('Get Dropbox directory')
         self.get_dropbox_dir_button.connect('clicked', self.get_dropbox_path)
+        self.get_dropbox_dir_button.set_sensitive(dropbox_enabled)
 
         # Checkbox state event
         self.use_dropbox_checkbox.connect('toggled',
@@ -161,15 +165,10 @@ class Settings(object):
         settings_window.add(parent_vbox)
 
         settings_window.show_all()
-        self.get_config()
 
     def toggle_editable(self, checkbox, entry, button):
         self.dropbox_dir_location.set_sensitive(checkbox.get_active())
         self.get_dropbox_dir_button.set_sensitive(checkbox.get_active())
-
-    def get_config(self):
-        config = Config()
-        config.read_config()
 
     def save_config(self):
         kwargs = dict()
