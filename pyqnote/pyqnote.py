@@ -1,11 +1,14 @@
 import gtk
 import keybinder
-from dropbox_actor import DropboxActor
+
 from config import Config
 
 
 class PyQNote(object):
     def __init__(self):
+        # Initialize configuration
+        self.config = Config().read_config()
+
         # Status icon
         self.status_icon = gtk.StatusIcon()
         self.status_icon.set_from_stock(gtk.STOCK_INDEX)
@@ -43,7 +46,7 @@ class PyQNote(object):
                                            gtk.ACCEL_VISIBLE)
 
         # Global hotkey
-        hotkey = '<Alt>B'
+        hotkey = self.config['general']['global_hotkey']
         keybinder.bind(hotkey, self.hotkey_callback)
 
     def show_status_menu(self, icon, button, time):
@@ -115,37 +118,20 @@ class PyQNote(object):
 
 class Settings(object):
     def __init__(self, window):
-        config_dict = Config().read_config()
-        dropbox_enabled = config_dict['dropbox']['use'] == 'True'
-        try:
-            dropbox_path = config_dict['dropbox']['path']
-        except KeyError:
-            dropbox_path = ''
+        # Initialize config
+        self.config = Config().read_config()
 
         # Settings window
         settings_window = gtk.Window()
         settings_window.set_usize(600, 300)
         settings_window.set_title('Settings')
 
-        # Use Dropbox checkbox
-        self.use_dropbox_checkbox = gtk.CheckButton('Use Dropbox')
-        self.use_dropbox_checkbox.set_active(dropbox_enabled)
+        # Program directory label
+        self.program_dir_label = gtk.Label('Program directory')
 
-        # Dropbox path entry
-        self.dropbox_dir_location = gtk.Entry()
-        self.dropbox_dir_location.set_text(dropbox_path)
-        self.dropbox_dir_location.set_sensitive(dropbox_enabled)
-
-        # Get Dropbox directory button
-        self.get_dropbox_dir_button = gtk.Button('Get Dropbox directory')
-        self.get_dropbox_dir_button.connect('clicked', self.get_dropbox_path)
-        self.get_dropbox_dir_button.set_sensitive(dropbox_enabled)
-
-        # Checkbox state event
-        self.use_dropbox_checkbox.connect('toggled',
-                                     self.toggle_editable,
-                                     self.dropbox_dir_location,
-                                     self.get_dropbox_dir_button)
+        # Program directory entry
+        self.program_dir = gtk.Entry()
+        self.program_dir.set_text(self.config['general']['program_dir'])
 
         # Save button
         save_button = gtk.Button('Save')
@@ -157,28 +143,20 @@ class Settings(object):
 
         # VBox
         parent_vbox = gtk.VBox(False, 5)
-        parent_vbox.pack_start(self.use_dropbox_checkbox)
-        parent_vbox.pack_start(self.dropbox_dir_location)
-        parent_vbox.pack_start(self.get_dropbox_dir_button)
+        parent_vbox.pack_start(self.program_dir_label)
+        parent_vbox.pack_start(self.program_dir)
         parent_vbox.pack_start(save_button)
         parent_vbox.pack_start(cancel_button)
         settings_window.add(parent_vbox)
 
         settings_window.show_all()
 
-    def toggle_editable(self, checkbox, entry, button):
-        self.dropbox_dir_location.set_sensitive(checkbox.get_active())
-        self.get_dropbox_dir_button.set_sensitive(checkbox.get_active())
-
     def save_config(self):
-        kwargs = dict()
-        kwargs['use_dropbox'] = self.use_dropbox_checkbox.get_active()
-        kwargs['dropbox_path'] = self.dropbox_dir_location.get_text()
-        config = Config()
-        config.write_config(**kwargs)
+        config_dict = {'general': {'program_dir': self.program_dir.get_text(),
+                                   'global_hotkey': '<Alt>B',
+                                   'save_on_enter': 'yes'}}
+        Config().write_config(config_dict)
 
-    def get_dropbox_path(self, window):
-        self.dropbox_dir_location.set_text(DropboxActor.get_path())
 
 def main():
     PyQNote()
